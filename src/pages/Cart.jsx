@@ -1,0 +1,136 @@
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useCart, formatBRL } from '../context/CartContext.jsx'
+import { supabase } from '../lib/supabase'
+import ProfileIcon from '../components/ProfileIcon'
+
+export default function Cart(){
+  const navigate = useNavigate()
+  const { items, removeItem, total, clearCart } = useCart()
+  const [submitting, setSubmitting] = useState(false)
+  const [orderError, setOrderError] = useState('')
+
+  const handleConfirm = async () => {
+    if(!items.length || submitting) return
+    try{
+      setOrderError('')
+      setSubmitting(true)
+      const { data, error } = await supabase.auth.getUser()
+      if(error) throw error
+      const user = data?.user
+      if(!user) throw new Error('Faça login para finalizar o pedido.')
+
+      const envFallback = Number(import.meta.env.VITE_LANCHONETE_DEFAULT_ID ?? NaN)
+      const lanchoneteId = items[0]?.lanchoneteId ?? (Number.isFinite(envFallback) ? envFallback : null)
+      if(!lanchoneteId) throw new Error('Não foi possível identificar a lanchonete do pedido. Adicione os itens novamente.')
+      const { data: pedido, error: pedidoErr } = await supabase
+        .from('pedido')
+        .insert({
+          id_lanchonete: lanchoneteId,
+          id_user_cliente: user.id,
+          status_pedido: 'confirmado',
+          valor_total: total
+        })
+        .select('id_pedido')
+        .single()
+      if(pedidoErr) throw pedidoErr
+
+      const itensPayload = items.map(it => {
+        const productId = Number(it.id)
+        if(!Number.isFinite(productId)) throw new Error(`Produto "${it.name}" sem ID válido para registrar.`)
+        return {
+          id_pedido: pedido.id_pedido,
+          id_produto: productId,
+          quantidade: it.qty,
+          preco_unitario: it.price
+        }
+      })
+      if(itensPayload.length){
+        const { error: itensErr } = await supabase.from('itens_pedido').insert(itensPayload)
+        if(itensErr) throw itensErr
+      }
+
+      clearCart()
+      navigate('/success', { replace: true })
+    }catch(err){
+      console.error('Falha ao registrar pedido', err)
+      setOrderError(err.message || 'Erro ao registrar pedido.')
+    }finally{
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="relative min-h-screen bg-white flex flex-col overflow-hidden">
+      <div className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-blueTop/40 to-transparent pointer-events-none" />
+      {/* Header */}
+      <header className="relative bg-gradient-to-b from-blueTop to-[#5f88db] pt-4 pb-8 border-b border-black/20 shadow">
+        <div className="max-w-6xl mx-auto px-4 relative">
+          <button aria-label="voltar" onClick={()=>navigate(-1)} className="absolute left-2 top-3 text-black/80">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+          <div className="flex items-center justify-center gap-3">
+            <button onClick={()=>navigate('/options')} className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow border text-xs md:text-sm font-semibold tracking-wide">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h12v2H3v-2z"/></svg>
+              LANCHONETES
+            </button>
+            <span className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow border text-xs md:text-sm font-semibold tracking-wide">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M7 18a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm10 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM3 4h2l3.6 7.59L7.25 14H19a1 1 0 0 0 0-2H9.42l.93-2H18a1 1 0 1 0 0-2H9L7.21 4H3z"/></svg>
+              CARRINHO
+            </span>
+            <button onClick={()=>navigate('/perfil')} className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow border text-xs md:text-sm font-semibold tracking-wide">
+              <ProfileIcon size={16} />
+              PERFIL
+            </button>
+          </div>
+          <div className="absolute right-2 top-2 bg-white rounded-md px-3 py-1 shadow border">
+            <img src="/assets/Senac.png" alt="Logo" className="h-8" />
+          </div>
+        </div>
+      </header>
+
+      {/* Content */}
+      <main className="flex-1 relative z-10">
+        <div className="max-w-6xl mx-auto px-4 py-10">
+          <div className="grid md:grid-cols-2 gap-6">
+            {items.map(it => (
+              <div key={it.id} className="flex items-center gap-4 rounded-2xl border border-gray-100 bg-white shadow-lg shadow-slate-200/50 p-4">
+                <div className="relative w-20 h-16 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0 border border-gray-200">
+                  {it.image ? <img src={it.image} alt={it.name} className="w-full h-full object-cover" /> : null}
+                  {it.qty > 1 && (
+                    <span className="absolute -top-2 -right-2 text-xs px-2 py-0.5 rounded-full bg-blueTop text-white shadow">x{it.qty}</span>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <div className="font-semibold text-gray-800">{it.name}</div>
+                  <div className="text-sm text-gray-600">{formatBRL(it.price)} • Qtd: {it.qty}</div>
+                </div>
+                <button onClick={()=>removeItem(it.id)} className="w-8 h-8 rounded-full bg-red-500 text-white flex items-center justify-center shadow" aria-label="remover">×</button>
+              </div>
+            ))}
+            {items.length === 0 && (
+              <div className="col-span-full text-center text-gray-600">Seu carrinho está vazio.</div>
+            )}
+          </div>
+
+          <div className="mt-6 flex items-center justify-between">
+            <div className="inline-flex items-center gap-2 px-4 py-3 rounded-2xl border bg-white shadow text-sm">
+              <span className="text-gray-700">total:</span>
+              <span className="font-semibold">{formatBRL(total)}</span>
+            </div>
+            <button
+              disabled={!items.length || submitting}
+              onClick={handleConfirm}
+              className="px-6 py-2 rounded-md bg-accent text-black font-semibold border border-amber-700/40 shadow disabled:opacity-60">
+              {submitting ? 'ENVIANDO...' : 'CONFIRMAR'}
+            </button>
+          </div>
+          {orderError && <div className="mt-3 text-sm text-red-600">{orderError}</div>}
+        </div>
+      </main>
+
+      <footer className="h-24 bg-gradient-to-t from-blueTop to-[#5f88db]" />
+    </div>
+  )
+}
+

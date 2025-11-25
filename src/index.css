@@ -1,0 +1,18 @@
+﻿@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base (sem @layer/@apply para evitar conflito do parser) */
+body { background-color:#ffffff; min-height:100vh; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+
+/* Onda padrão */
+.onda{ position:absolute; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:none; max-height:12.5rem; object-fit:contain; pointer-events:none; user-select:none; }
+
+/* Utilitário para limitar descrições em cards */
+.text-clamp-3{
+  display:-webkit-box;
+  -webkit-line-clamp:3;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+  word-break:break-word;
+}
