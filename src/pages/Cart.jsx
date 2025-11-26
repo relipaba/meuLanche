@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import { useCart, formatBRL } from '../context/CartContext.jsx'
 import { supabase } from '../lib/supabase'
 import ProfileIcon from '../components/ProfileIcon'
+import { useIsAdmin } from '../hooks/useIsAdmin'
 
 export default function Cart(){
   const navigate = useNavigate()
   const { items, removeItem, total, clearCart } = useCart()
   const [submitting, setSubmitting] = useState(false)
   const [orderError, setOrderError] = useState('')
+  const { isAdmin } = useIsAdmin()
 
   const handleConfirm = async () => {
     if(!items.length || submitting) return
@@ -82,6 +84,12 @@ export default function Cart(){
               <ProfileIcon size={16} />
               PERFIL
             </button>
+            {isAdmin && (
+              <button onClick={()=>navigate('/admin')} className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow border text-xs md:text-sm font-semibold tracking-wide">
+                <ProfileIcon size={16} />
+                ADMINISTRAR
+              </button>
+            )}
           </div>
           <div className="absolute right-2 top-2 bg-white rounded-md px-3 py-1 shadow border">
             <img src="/assets/Senac.png" alt="Logo" className="h-8" />

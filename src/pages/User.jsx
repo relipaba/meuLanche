@@ -63,6 +63,7 @@ export default function User(){
   const [hasProfile, setHasProfile] = useState(false)
   const [photoPreview, setPhotoPreview] = useState(null)
   const [activeUserId, setActiveUserId] = useState(null)
+  const [isAdminFlag, setIsAdminFlag] = useState(false)
   const update = (k) => (e) => setForm(v => ({ ...v, [k]: e.target.value }))
   const displayName = form.nome || placeholders.nome || 'nome'
 
@@ -96,6 +97,7 @@ export default function User(){
           if(profileError) throw profileError
           if(profile){
             setHasProfile(true)
+            setIsAdminFlag(Boolean(profile.adm))
             mergedPlaceholders = { ...basePlaceholders }
             profileFields.forEach(field => {
               const value = profile[field]
@@ -127,12 +129,15 @@ export default function User(){
       if(error) throw error
       const userId = data?.user?.id
       if(!userId) throw new Error('Faça login para atualizar o perfil.')
+      const userEmail = data?.user?.email
       const payload = {}
       profileFields.forEach(field => {
         if(field === 'email') return
         const value = form[field]
         if(isFilled(value)) payload[field] = value
       })
+      if(userEmail) payload.email = userEmail
+      payload.adm = isAdminFlag
       if(!Object.keys(payload).length){
         setSaveError('Preencha algum campo para atualizar.')
         return
@@ -147,13 +152,14 @@ export default function User(){
       }
       setPlaceholders(prev => {
         const next = { ...prev }
-        Object.keys(payload).forEach(field => { next[field] = payload[field] })
+        Object.keys(payload).forEach(field => { if(field in next) next[field] = payload[field] })
+        if(userEmail) next.email = userEmail
         return next
       })
       if(payload.foto){
         setPhotoPreview(payload.foto)
       }
-      setForm(prev => ({ ...prev, ...profileFields.reduce((acc, field) => ({ ...acc, [field]: '' }), {}) }))
+      setForm(prev => ({ ...prev, ...profileFields.reduce((acc, field) => ({ ...acc, [field]: '' }), {}), senha:'', confirmar:'' }))
     }catch(err){
       console.error('Falha ao salvar perfil', err)
       setSaveError(err.message || 'Erro ao salvar perfil.')
@@ -214,7 +220,7 @@ export default function User(){
 
         <section className="bg-white/90 backdrop-blur rounded-3xl shadow-2xl ring-1 ring-black/5 p-6">
           <div className="grid md:grid-cols-2 gap-4">
-            <input placeholder={placeholders.email} value={form.email} onChange={update('email')} className="input md:col-span-2" />
+            <input placeholder={placeholders.email} value={placeholders.email} readOnly className="input md:col-span-2 bg-gray-100 cursor-not-allowed" />
             <input placeholder={placeholders.nome} value={form.nome} onChange={update('nome')} className="input" />
             <input placeholder={placeholders.idade} value={form.idade} onChange={update('idade')} className="input" />
             <input placeholder={placeholders.cep} value={form.cep} onChange={update('cep')} className="input" />

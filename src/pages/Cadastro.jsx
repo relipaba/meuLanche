@@ -86,12 +86,20 @@ export default function Cadastro(){
                   if(!email || !senha || !nome) throw new Error('Preencha nome, email e senha')
                   if(senha !== confirmar) throw new Error('As senhas não conferem')
                   setLoading(true)
-                  const { error } = await supabase.auth.signUp({
+                  const { data, error } = await supabase.auth.signUp({
                     email,
                     password: senha,
                     options: { data: { nome } }
                   })
                   if(error) throw error
+                  const userId = data?.user?.id
+                  const userEmail = data?.user?.email || email
+                  if(userId){
+                    await supabase.from('perfil').upsert(
+                      { id_user: userId, nome, email: userEmail },
+                      { onConflict: 'id_user' }
+                    )
+                  }
                   navigate('/options')
                 }catch(e){ setErro(e.message || 'Falha ao cadastrar') }
                 finally{ setLoading(false) }

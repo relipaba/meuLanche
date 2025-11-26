@@ -10,6 +10,7 @@ import User from './pages/User'
 import Historico from './pages/Historico'
 import Cart from './pages/Cart'
 import Success from './pages/Success'
+import Admin from './pages/Admin'
 
 export default function App(){
   return (
@@ -24,6 +25,7 @@ export default function App(){
       <Route path="/historico" element={<Historico />} />
       <Route path="/cart" element={<Cart />} />
       <Route path="/success" element={<Success />} />
+      <Route path="/admin" element={<Admin />} />
       <Route path="*" element={<Initial />} />
     </Routes>
   )

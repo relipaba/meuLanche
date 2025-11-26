@@ -4,6 +4,7 @@ import ProductModal from '../components/ProductModal'
 import { useCart } from '../context/CartContext.jsx'
 import { fetchProducts } from '../lib/products'
 import ProfileIcon from '../components/ProfileIcon'
+import { useIsAdmin } from '../hooks/useIsAdmin'
 
 // Produtos são carregados do Supabase
 const LANCHONETE_SESC_ID = Number(import.meta.env.VITE_LANCHONETE_SESC_ID ?? 6)
@@ -11,6 +12,7 @@ const LANCHONETE_SESC_ID = Number(import.meta.env.VITE_LANCHONETE_SESC_ID ?? 6)
 export default function HomeSesc(){
   const { addItem } = useCart()
   const navigate = useNavigate()
+  const { isAdmin } = useIsAdmin()
   const [filterOpen, setFilterOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState(null)
@@ -51,7 +53,7 @@ export default function HomeSesc(){
           <button aria-label="voltar" onClick={()=>navigate(-1)} className="absolute left-2 top-3 text-black/80">
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
           </button>
-          <div className="flex items-center justify-center gap-3">
+          <div className="flex items-center justify-center gap-3 flex-wrap">
             <button onClick={()=>navigate('/options')} className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow border text-xs md:text-sm font-semibold tracking-wide">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h12v2H3v-2z"/></svg>
               LANCHONETES
@@ -64,6 +66,12 @@ export default function HomeSesc(){
               <ProfileIcon size={16} />
               PERFIL
             </button>
+            {isAdmin && (
+              <button onClick={()=>navigate('/admin')} className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow border text-xs md:text-sm font-semibold tracking-wide">
+                <ProfileIcon size={16} />
+                ADMINISTRAR
+              </button>
+            )}
           </div>
           <div className="absolute right-2 top-2 bg-white rounded-md px-3 py-1 shadow border">
             <img src="/assets/Sesc.png" alt="Sesc" className="h-8" />
@@ -145,6 +153,5 @@ export default function HomeSesc(){
     </div>
   )
 }
-
 
 
