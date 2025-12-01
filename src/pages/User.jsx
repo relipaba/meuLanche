@@ -130,29 +130,33 @@ export default function User(){
       const userId = data?.user?.id
       if(!userId) throw new Error('Faça login para atualizar o perfil.')
       const userEmail = data?.user?.email
-      const payload = {}
+      const payload = { id_user: userId }
       profileFields.forEach(field => {
         if(field === 'email') return
         const value = form[field]
         if(isFilled(value)) payload[field] = value
       })
       if(userEmail) payload.email = userEmail
-      payload.adm = isAdminFlag
-      if(!Object.keys(payload).length){
+      // n�o alterar o campo adm ao salvar perfil
+      if(!Object.keys(payload).some(k => k !== 'id_user')){
         setSaveError('Preencha algum campo para atualizar.')
         return
       }
-      if(hasProfile){
-        const { error: updateErr } = await supabase.from('perfil').update(payload).eq('id_user', userId)
-        if(updateErr) throw updateErr
-      }else{
-        const { error: insertErr } = await supabase.from('perfil').insert({ id_user: userId, ...payload })
+      const { data: updated, error: updateErr } = await supabase
+        .from('perfil')
+        .update(payload)
+        .eq('id_user', userId)
+        .select('id_user')
+      if(updateErr) throw updateErr
+
+      if(!updated || updated.length === 0){
+        const { error: insertErr } = await supabase.from('perfil').insert(payload)
         if(insertErr) throw insertErr
-        setHasProfile(true)
       }
+      setHasProfile(true)
       setPlaceholders(prev => {
         const next = { ...prev }
-        Object.keys(payload).forEach(field => { if(field in next) next[field] = payload[field] })
+        Object.keys(payload).forEach(field => { if(field in next && field !== 'id_user') next[field] = payload[field] })
         if(userEmail) next.email = userEmail
         return next
       })
